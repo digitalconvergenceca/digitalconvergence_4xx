@@ -3,3 +3,8 @@ services:
     class: Drupal\digitalconvergence_4xx\EventSubscriber\RouteSubscriber
     tags:
       - { name: event_subscriber }
+  digitalconvergence_4xx.http_event_subscriber:
+    class: Drupal\digitalconvergence_4xx\EventSubscriber\HttpEventSubscriber
+    arguments: [ '@current_user' ]
+    tags:
+      - { name: 'event_subscriber' }

@@ -22,7 +22,18 @@ function digitalconvergence_4xx_theme($existing, $type, $theme, $path) {
     ],
     'digitalconvergence_404' => [
       'template' => 'digitalconvergence-404',
-      'variables' => [],
+      'variables' => [
+        'page_404_title' => [
+          '#type' => 'html_tag',
+          '#tag' => 'h1',
+          '#value' => t('Page not found'),
+        ],
+        'page_404_body' => [
+          '#type' => 'html_tag',
+          '#tag' => 'p',
+          '#value' => t('The requested page could not be found.'),
+        ],
+      ],
     ]
   ];
 }
@@ -31,13 +42,57 @@ function digitalconvergence_4xx_theme($existing, $type, $theme, $path) {
  * Implements hook_form_alter().
  */
 function digitalconvergence_4xx_form_alter(array &$form, FormStateInterface $form_state, $form_id) {
-    // var_dump($form['error_page']['site_403']);
   if (strpos($form_id, 'system_site_information_settings') === 0) {
+    // Deny access to default 4xx site settings.
     $form['error_page']['site_403'] = [
       '#access' => FALSE,
     ];
     $form['error_page']['site_404'] = [
       '#access' => FALSE,
     ];
+    // Add options and submit handler for 404 error page custom content.
+    $config = \Drupal::configFactory()->getEditable('system.site');
+    $form['error_page']['site_404_content'] = [
+      '#type' => 'fieldset',
+      '#title' => t('404 (not found) page'),
+      'site_403_to_404_anonymous' => [
+        '#type' => 'checkbox',
+        '#title' => t('Present anonymous users with a 404 instead of 403'),
+        '#default_value' => $config->get('page.403_to_404_anonymous'),
+      ],
+      'site_404_content_title' => [
+        '#type' => 'textfield',
+        '#title' => t('404 (not found) page title'),
+        '#default_value' => $config->get('page.404_title'),
+      ],
+      'site_404_content_body' => [
+        '#type' => 'text_format',
+        '#title' => t('404 (not found) page body'),
+        '#default_value' => $config->get('page.404_body'),
+      ],
+    ];
+    $form['actions']['submit']['#submit'][] = 'digitalconvergence_4xx_system_site_information_settings_submit';
   }
 }
+
+/**
+ * Site Information Settings form custom submit handler.
+ *
+ * @param array $form
+ *   Nested array of form elements that comprise the form.
+ * @param \Drupal\Core\Form\FormStateInterface $form_state
+ *   The current state of the form. The arguments that \Drupal::formBuilder()->getForm() was originally called with
+ *   are available in the array $form_state->getBuildInfo()['args'].
+ */
+function digitalconvergence_4xx_system_site_information_settings_submit(array $form, FormStateInterface $form_state) {
+  $site_403_to_404_anonymous = $form_state->getValues()['site_403_to_404_anonymous'];
+  $site_404_title = $form_state->getValues()['site_404_content_title'];
+  $site_404_content_body = $form_state->getValues()['site_404_content_body']['value'];
+  \Drupal::configFactory()
+    ->getEditable('system.site')
+    ->set('page.403_to_404_anonymous', $site_403_to_404_anonymous)
+    ->set('page.404_title', $site_404_title)
+    ->set('page.404_body', $site_404_content_body)
+    ->save();
+}
+
