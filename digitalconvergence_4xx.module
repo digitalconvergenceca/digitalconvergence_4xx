@@ -71,7 +71,7 @@ function digitalconvergence_4xx_form_alter(array &$form, FormStateInterface $for
         '#default_value' => $config->get('page.404_body'),
       ],
     ];
-    $form['actions']['submit']['#submit'][] = 'digitalconvergence_4xx_system_site_information_settings_submit';
+    $form['#submit'][] = 'digitalconvergence_4xx_system_site_information_settings_submit';
   }
 }
 
