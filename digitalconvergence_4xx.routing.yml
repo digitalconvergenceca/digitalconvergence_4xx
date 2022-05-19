@@ -1,0 +1,6 @@
+digitalconvergence_4xx.redirect_url_autocomplete:
+  path: '/admin/config/system/site-information/redirect-url-autocomplete'
+  defaults:
+    _controller: '\Drupal\digitalconvergence_4xx\Controller\RedirectUrlAutocompleteController::autocomplete'
+  requirements:
+    _permission: 'administer site configuration'
