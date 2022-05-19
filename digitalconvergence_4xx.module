@@ -50,27 +50,58 @@ function digitalconvergence_4xx_form_alter(array &$form, FormStateInterface $for
     $form['error_page']['site_404'] = [
       '#access' => FALSE,
     ];
+
     // Add options and submit handler for 404 error page custom content.
     $config = \Drupal::configFactory()->getEditable('system.site');
-    $form['error_page']['site_404_content'] = [
-      '#type' => 'fieldset',
-      '#title' => t('404 (not found) page'),
-      'site_403_to_404_anonymous' => [
-        '#type' => 'checkbox',
-        '#title' => t('Present anonymous users with a 404 instead of 403'),
-        '#default_value' => $config->get('page.403_to_404_anonymous'),
+
+    $form['error_page']['site_403_behaviour'] = [
+      '#type' => 'radios',
+      '#title' => t('Behaviour of a 403 (forbidden) page result for anonymous users'),
+      '#options' => [
+        '403_page' => t('Display a 403 (forbidden) page (default)'),
+        '404_page' => t('Display a 404 (not found) page'),
+        'redirect_page' => t('Redirect to a specific page'),
       ],
+      '#default_value' => $config->get('page.403_behaviour') ? $config->get('page.403_behaviour') : '403_page',
+    ];
+
+    $form['error_page']['site_403_content'] = [
+      'site_403_content_redirect_url' => [
+        '#type' => 'textfield',
+        '#title' => t('Redirect URL'),
+        '#description' => t('Begin typing the title of a node to get its path, and for other internal links (eg. /user/register), type in the full path, beginning with a leading slash. External URLs will not be accepted.'),
+        '#placeholder' => '/user/register',
+        '#default_value' => $config->get('page.403_redirect_url'),
+        '#autocomplete_route_name' => 'digitalconvergence_4xx.redirect_url_autocomplete',
+        '#pattern' => '^/+.+[^/]$',
+        '#element_validate' => ['digitalconvergence_4xx_validate_403_redirect_url'],
+        '#states' => [
+          'visible' => [
+            ':input[name="site_403_behaviour"]' => ['value' => 'redirect_page'],
+          ],
+          'required' => [
+            ':input[name="site_403_behaviour"]' => ['value' => 'redirect_page'],
+          ],
+        ],
+      ],
+    ];
+
+    $form['error_page']['site_404_content'] = [
+      '#type' => 'details',
+      '#title' => t('404 (not found) page'),
+      '#open' => TRUE,
       'site_404_content_title' => [
         '#type' => 'textfield',
         '#title' => t('404 (not found) page title'),
-        '#default_value' => $config->get('page.404_title'),
+        '#default_value' => $config->get('page.404_title') ? $config->get('page.404_title') : t('Page not found'),
       ],
       'site_404_content_body' => [
         '#type' => 'text_format',
         '#title' => t('404 (not found) page body'),
-        '#default_value' => $config->get('page.404_body'),
+        '#default_value' => $config->get('page.404_body') ? $config->get('page.404_body') : t('The requested page could not be found.'),
       ],
     ];
+
     $form['#submit'][] = 'digitalconvergence_4xx_system_site_information_settings_submit';
   }
 }
@@ -85,14 +116,33 @@ function digitalconvergence_4xx_form_alter(array &$form, FormStateInterface $for
  *   are available in the array $form_state->getBuildInfo()['args'].
  */
 function digitalconvergence_4xx_system_site_information_settings_submit(array $form, FormStateInterface $form_state) {
-  $site_403_to_404_anonymous = $form_state->getValues()['site_403_to_404_anonymous'];
-  $site_404_title = $form_state->getValues()['site_404_content_title'];
-  $site_404_content_body = $form_state->getValues()['site_404_content_body']['value'];
+  $values = $form_state->getValues();
+  $site_403_behaviour = $values['site_403_behaviour'];
+  $site_403_redirect_url = $values['site_403_content_redirect_url'];
+  $site_404_title = $values['site_404_content_title'];
+  $site_404_content_body = $values['site_404_content_body']['value'];
   \Drupal::configFactory()
     ->getEditable('system.site')
-    ->set('page.403_to_404_anonymous', $site_403_to_404_anonymous)
+    ->set('page.403_behaviour', $site_403_behaviour)
+    ->set('page.403_redirect_url', $site_403_redirect_url)
     ->set('page.404_title', $site_404_title)
     ->set('page.404_body', $site_404_content_body)
     ->save();
 }
 
+/**
+ * 403 page redirect URL custom validation handler that checks if an internal
+ * path is valid.
+ *
+ * @param array $element
+ *   The form element.
+ * @param \Drupal\Core\Form\FormStateInterface $form_state
+ *   The current state of the form.
+ */
+function digitalconvergence_4xx_validate_403_redirect_url(array $element, FormStateInterface &$form_state) {
+  $site_403_redirect_url = $form_state->getValue('site_403_content_redirect_url');
+
+  if (!\Drupal::service('path.validator')->isValid($site_403_redirect_url)) {
+    $form_state->setError($element, t('The path specified is invalid.'));
+  }
+}

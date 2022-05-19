@@ -4,6 +4,7 @@ namespace Drupal\digitalconvergence_4xx\EventSubscriber;
 
 use Drupal\Core\EventSubscriber\HttpExceptionSubscriberBase;
 use Drupal\Core\Session\AccountInterface;
+use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpKernel\Event\ExceptionEvent;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
@@ -37,12 +38,19 @@ class HttpEventSubscriber extends HttpExceptionSubscriberBase {
   }
 
   /**
-   * For anonymous users, throw a 404 instead of a 403 error.
+   * For anonymous users, throw a 404 page or redirect instead of a 403 error.
    */
   public function on403(ExceptionEvent $event) {
     $config = \Drupal::configFactory()->getEditable('system.site');
-    if ($config->get('page.403_to_404_anonymous') == 1 && $this->currentUser->isAnonymous()) {
-      $event->setThrowable(new NotFoundHttpException());
+
+    if ($this->currentUser->isAnonymous()) {
+      if ($config->get('page.403_behaviour') == '404_page') {
+        $event->setThrowable(new NotFoundHttpException());
+      }
+
+      elseif ($config->get('page.403_behaviour') == 'redirect_page') {
+        $event->setResponse(new RedirectResponse($config->get('page.403_redirect_url')));
+      }
     }
   }
 
