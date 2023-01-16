@@ -33,6 +33,9 @@ function digitalconvergence_4xx_theme($existing, $type, $theme, $path) {
           '#tag' => 'p',
           '#value' => t('The requested page could not be found.'),
         ],
+        '#page_404_image' => [
+          NULL
+        ],
       ],
     ]
   ];
@@ -70,6 +73,14 @@ function digitalconvergence_4xx_form_alter(array &$form, FormStateInterface $for
         '#title' => t('404 (not found) page body'),
         '#default_value' => $config->get('page.404_body'),
       ],
+      'site_404_image' => [
+        '#type' => 'media_library',
+        '#allowed_bundles' => ['image'],
+        '#title' => t('404 Image'),
+        '#default_value' => $config->get('page.404_image') ?: NULL,
+        '#description' => t("Image to display on the 404 page."),
+        '#cardinality'  => 1
+      ],
     ];
     $form['#submit'][] = 'digitalconvergence_4xx_system_site_information_settings_submit';
   }
@@ -88,11 +99,35 @@ function digitalconvergence_4xx_system_site_information_settings_submit(array $f
   $site_403_to_404_anonymous = $form_state->getValues()['site_403_to_404_anonymous'];
   $site_404_title = $form_state->getValues()['site_404_content_title'];
   $site_404_content_body = $form_state->getValues()['site_404_content_body']['value'];
+  $site_404_image = $form_state->getValues()['site_404_image'];
   \Drupal::configFactory()
     ->getEditable('system.site')
     ->set('page.403_to_404_anonymous', $site_403_to_404_anonymous)
     ->set('page.404_title', $site_404_title)
     ->set('page.404_body', $site_404_content_body)
+    ->set('page.404_image', $site_404_image)
     ->save();
 }
 
+function digitalconvergence_4xx_preprocess_digitalconvergence_404(&$variables) {
+  $config = \Drupal::configFactory()->getEditable('system.site');
+
+  $media = \Drupal\media\Entity\Media::load($config->get('page.404_image'));
+  if (!empty($media)) {
+    $fileUri = $media->field_media_image->entity->getFileuri();
+    $image_url = \Drupal::service('file_url_generator')->generateString($fileUri);
+    $image_alt = $media->field_media_image->alt;
+  }
+
+  $variables['page_404_image'] = [
+    '#type' => 'html_tag',
+    '#tag' => 'img',
+    '#attributes' => [
+      'src' => $image_url,
+      'alt' => $image_alt,
+      'class' => [
+        'img-fluid',
+      ]
+    ],
+  ];
+}
