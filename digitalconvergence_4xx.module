@@ -6,6 +6,7 @@
  */
 
 use Drupal\Core\Form\FormStateInterface;
+use Drupal\media\Entity\Media;
 
 /**
  * Implements hook_theme().
@@ -54,7 +55,7 @@ function digitalconvergence_4xx_form_alter(array &$form, FormStateInterface $for
       '#access' => FALSE,
     ];
     // Add options and submit handler for 404 error page custom content.
-    $config = \Drupal::configFactory()->getEditable('system.site');
+    $config = Drupal::configFactory()->getEditable('system.site');
     $form['error_page']['site_404_content'] = [
       '#type' => 'fieldset',
       '#title' => t('404 (not found) page'),
@@ -100,7 +101,7 @@ function digitalconvergence_4xx_system_site_information_settings_submit(array $f
   $site_404_title = $form_state->getValues()['site_404_content_title'];
   $site_404_content_body = $form_state->getValues()['site_404_content_body']['value'];
   $site_404_image = $form_state->getValues()['site_404_image'];
-  \Drupal::configFactory()
+  Drupal::configFactory()
     ->getEditable('system.site')
     ->set('page.403_to_404_anonymous', $site_403_to_404_anonymous)
     ->set('page.404_title', $site_404_title)
@@ -109,13 +110,21 @@ function digitalconvergence_4xx_system_site_information_settings_submit(array $f
     ->save();
 }
 
+/**
+ * Implements hook_preprocess_digitalconvergence_404
+ *
+ * @param $variables
+ */
 function digitalconvergence_4xx_preprocess_digitalconvergence_404(&$variables) {
-  $config = \Drupal::configFactory()->getEditable('system.site');
+  $config = Drupal::configFactory()->getEditable('system.site');
 
-  $media = \Drupal\media\Entity\Media::load($config->get('page.404_image'));
+  $config_404_image = $config->get('page.404_image');
+  if (!empty($config_404_image)) {
+    $media = Media::load($config->get('page.404_image'));
+  }
   if (!empty($media)) {
     $fileUri = $media->field_media_image->entity->getFileuri();
-    $image_url = \Drupal::service('file_url_generator')->generateString($fileUri);
+    $image_url = Drupal::service('file_url_generator')->generateString($fileUri);
     $image_alt = $media->field_media_image->alt;
   }
 
