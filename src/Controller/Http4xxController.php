@@ -32,6 +32,7 @@ class Http4xxController extends SystemHttp4xxController {
    */
   public function on404() {
     $config = \Drupal::configFactory()->getEditable('system.site');
+
     return [
       '#theme' => 'digitalconvergence_404',
       '#page_404_title' => [
@@ -41,6 +42,9 @@ class Http4xxController extends SystemHttp4xxController {
       ],
       '#page_404_body' => [
         '#markup' => $config->get('page.404_body'),
+      ],
+      '#page_404_image' => [
+        null
       ],
     ];
   }
